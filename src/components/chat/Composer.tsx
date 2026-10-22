@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useImperativeHandle, useRef, useState, type KeyboardEvent, type Ref } from 'react'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import IconButton from '@mui/material/IconButton'
@@ -13,7 +13,12 @@ import { ACCEPTED_FILES } from '../../config'
 import { DocumentChip, type PendingUpload } from './DocumentChip'
 import { ModelPicker } from './ModelPicker'
 
+export interface ComposerHandle {
+  fill: (text: string) => void
+}
+
 interface ComposerProps {
+  ref?: Ref<ComposerHandle>
   onSend: (content: string) => void
   onStop: () => void
   onFiles: (files: File[]) => void
@@ -26,12 +31,12 @@ interface ComposerProps {
   onModelChange: (id: string) => void
   thinking: boolean
   onThinkingChange: (value: boolean) => void
-  draft?: { text: string; key: number }
   autoFocus?: boolean
   placeholder?: string
 }
 
 export function Composer({
+  ref,
   onSend,
   onStop,
   onFiles,
@@ -44,7 +49,6 @@ export function Composer({
   onModelChange,
   thinking,
   onThinkingChange,
-  draft,
   autoFocus,
   placeholder = '¿En qué puedo ayudarte hoy?',
 }: ComposerProps) {
@@ -53,11 +57,16 @@ export function Composer({
   const fileRef = useRef<HTMLInputElement>(null)
   const canSend = value.trim().length > 0 && !streaming
 
-  useEffect(() => {
-    if (!draft) return
-    setValue(draft.text)
-    inputRef.current?.focus()
-  }, [draft])
+  useImperativeHandle(
+    ref,
+    () => ({
+      fill: (text) => {
+        setValue(text)
+        inputRef.current?.focus()
+      },
+    }),
+    [],
+  )
 
   const submit = () => {
     if (!canSend) return

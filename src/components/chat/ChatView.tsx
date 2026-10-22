@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Box from '@mui/material/Box'
@@ -19,7 +19,7 @@ import { usePersistentState } from '../../store/preferences'
 import type { ShellContext } from '../layout/AppShell'
 import { ChatHeader } from './ChatHeader'
 import { AssistantMessage } from './AssistantMessage'
-import { Composer } from './Composer'
+import { Composer, type ComposerHandle } from './Composer'
 import type { PendingUpload } from './DocumentChip'
 import { EmptyState } from './EmptyState'
 import { UserMessage } from './UserMessage'
@@ -53,8 +53,8 @@ export function ChatView() {
   const stream = useActiveStream(conversationId)
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const [notice, setNotice] = useState<string | null>(null)
-  const [draft, setDraft] = useState<{ text: string; key: number }>()
   const [dragging, setDragging] = useState(false)
+  const composerRef = useRef<ComposerHandle>(null)
 
   const streaming = !!stream && !['stopped', 'error'].includes(stream.phase)
 
@@ -167,6 +167,8 @@ export function ChatView() {
 
   const composer = (
     <Composer
+      key={conversationId ?? 'new'}
+      ref={composerRef}
       onSend={send}
       onStop={() => conversationId && stopStream(conversationId)}
       onFiles={uploadFiles}
@@ -179,7 +181,6 @@ export function ChatView() {
       onModelChange={setModel}
       thinking={thinking}
       onThinkingChange={setThinking}
-      draft={draft}
       autoFocus
       placeholder={
         detail?.documents.length ? 'Pregunta lo que quieras sobre tus documentos…' : '¿En qué puedo ayudarte hoy?'
@@ -204,7 +205,7 @@ export function ChatView() {
       />
 
       {isNewChat ? (
-        <EmptyState composer={composer} onSuggestion={(text) => setDraft({ text, key: Date.now() })} />
+        <EmptyState composer={composer} onSuggestion={(text) => composerRef.current?.fill(text)} />
       ) : notFound ? (
         <Box sx={{ flex: 1, display: 'grid', placeItems: 'center', textAlign: 'center', px: 3 }}>
           <Box>
